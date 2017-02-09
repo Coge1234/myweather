@@ -99,6 +99,19 @@ public class WeatherActivity extends AppCompatActivity {
         });
     }
 
+    /*
+    * 当drawerlayout弹出时，点击Back键是隐藏侧滑菜单，而不是退出Activity
+    * */
+
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(findViewById(R.id.choose_area_fragment))){
+            drawerLayout.closeDrawers();
+        }else{
+            super.onBackPressed();
+        }
+    }
+
     private void init() {
         weatherLayout = (ScrollView) findViewById(R.id.weather_layout);
         titleCity = (TextView) findViewById(R.id.title_city);
