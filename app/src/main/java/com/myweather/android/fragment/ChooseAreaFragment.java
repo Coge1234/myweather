@@ -6,23 +6,24 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.myweather.android.MainActivity;
 import com.myweather.android.R;
 import com.myweather.android.WeatherActivity;
+import com.myweather.android.adapter.AreaAdapter;
 import com.myweather.android.db.City;
 import com.myweather.android.db.County;
 import com.myweather.android.db.Province;
 import com.myweather.android.util.HttpUtil;
+import com.myweather.android.util.RecyclerViewItemDecoration;
 import com.myweather.android.util.Utility;
 
 import org.litepal.crud.DataSupport;
@@ -46,8 +47,8 @@ public class ChooseAreaFragment extends Fragment {
     private ProgressDialog progressDialog;
     private TextView titleText;
     private Button backButton;
-    private ListView listView;
-    private ArrayAdapter<String> adapter;
+    private RecyclerView areaRecyclerView;
+    private AreaAdapter adapter;
     private List<String> dataList = new ArrayList<>();
 
     /*
@@ -91,18 +92,23 @@ public class ChooseAreaFragment extends Fragment {
         View view = inflater.inflate(R.layout.choose_area, container, false);
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.back_button);
-        listView = (ListView) view.findViewById(R.id.list_view);
-        adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, dataList);
-        listView.setAdapter(adapter);
+        areaRecyclerView = (RecyclerView) view.findViewById(R.id.area_recycler_view);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
+        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        areaRecyclerView.setLayoutManager(layoutManager);
+        adapter = new AreaAdapter(getContext(),dataList);
+        areaRecyclerView.setAdapter(adapter);
+        areaRecyclerView.addItemDecoration(new RecyclerViewItemDecoration(getContext()));
         return view;
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+        adapter.setOnItemClickListener(new AreaAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+            public void onClick(int position, View v) {
                 if (currentLevel == LEVEL_PROVINCE) {
                     selectedProvince = provinceList.get(position);
                     queryCities();
@@ -122,7 +128,6 @@ public class ChooseAreaFragment extends Fragment {
                         activity.swipeRefresh.setRefreshing(true);
                         activity.requestWeather(weatherId);
                     }
-
                 }
             }
         });
@@ -146,18 +151,21 @@ public class ChooseAreaFragment extends Fragment {
         titleText.setText("中国");
         backButton.setVisibility(View.GONE);
         provinceList = DataSupport.findAll(Province.class);
+//        Log.i("test","queryProvinces1");
         if (null != provinceList && provinceList.size() > 0) {
             dataList.clear();
             for (Province province : provinceList) {
+//                Log.i("test",province.getProvinceName());
                 dataList.add(province.getProvinceName());
             }
             adapter.notifyDataSetChanged();
-            listView.setSelection(0);
+            areaRecyclerView.scrollToPosition(0);
             currentLevel = LEVEL_PROVINCE;
         } else {
             String address = "http:guolin.tech/api/china";
             queryFromServer(address, "province");
         }
+//        Log.i("test","queryProvinces2");
     }
 
     /**
@@ -173,7 +181,8 @@ public class ChooseAreaFragment extends Fragment {
                 dataList.add(city.getCityName());
             }
             adapter.notifyDataSetChanged();
-            listView.setSelection(0);
+//            areaRecyclerView.setSelection(0);
+            areaRecyclerView.scrollToPosition(0);
             currentLevel = LEVEL_CITY;
         } else {
             int provinceCode = selectedProvince.getProvinceCode();
@@ -195,7 +204,8 @@ public class ChooseAreaFragment extends Fragment {
                 dataList.add(county.getCountyName());
             }
             adapter.notifyDataSetChanged();
-            listView.setSelection(0);
+//            areaRecyclerView.setSelection(0);
+            areaRecyclerView.scrollToPosition(0);
             currentLevel = LEVEL_COUNTY;
         } else {
             int provinceCode = selectedProvince.getProvinceCode();
