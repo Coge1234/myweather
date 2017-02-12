@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
-import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -102,7 +101,6 @@ public class WeatherActivity extends AppCompatActivity {
     /*
     * 当drawerlayout弹出时，点击Back键是隐藏侧滑菜单，而不是退出Activity
     * */
-
     @Override
     public void onBackPressed() {
         if (drawerLayout.isDrawerOpen(findViewById(R.id.choose_area_fragment))){

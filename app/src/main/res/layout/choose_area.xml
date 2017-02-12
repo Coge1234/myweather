@@ -18,6 +18,16 @@
             android:layout_centerInParent="true"
             android:textColor="#fff"
             android:textSize="20sp" />
+        <ImageView
+            android:id="@+id/area_manage_IvId"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginRight="10dp"
+            android:layout_alignParentBottom="true"
+            android:layout_toLeftOf="@id/title_text"
+            android:visibility="gone"
+            android:background="@drawable/ic_place_black_24dp"
+            />
 
         <Button
             android:id="@+id/back_button"

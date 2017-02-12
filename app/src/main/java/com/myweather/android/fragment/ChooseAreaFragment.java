@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,6 +20,7 @@ import com.myweather.android.MainActivity;
 import com.myweather.android.R;
 import com.myweather.android.WeatherActivity;
 import com.myweather.android.adapter.AreaAdapter;
+import com.myweather.android.db.AddCounty;
 import com.myweather.android.db.City;
 import com.myweather.android.db.County;
 import com.myweather.android.db.Province;
@@ -43,10 +45,12 @@ public class ChooseAreaFragment extends Fragment {
     private static final int LEVEL_PROVINCE = 0;
     private static final int LEVEL_CITY = 1;
     private static final int LEVEL_COUNTY = 2;
+    private static final int LEVEL_MANAGEMENT = 3;
 
     private ProgressDialog progressDialog;
     private TextView titleText;
     private Button backButton;
+    private ImageView locationIvObj;
     private RecyclerView areaRecyclerView;
     private AreaAdapter adapter;
     private List<String> dataList = new ArrayList<>();
@@ -78,7 +82,12 @@ public class ChooseAreaFragment extends Fragment {
     /**
      * 当前选中的级别
      */
-    private int currentLevel;
+    private static int currentLevel;
+
+    /**
+     * 已添加的县城列表
+     */
+    private List<AddCounty> addCounties;
 
 
     public ChooseAreaFragment() {
@@ -91,12 +100,13 @@ public class ChooseAreaFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area, container, false);
         titleText = (TextView) view.findViewById(R.id.title_text);
+        locationIvObj = (ImageView) view.findViewById(R.id.area_manage_IvId);
         backButton = (Button) view.findViewById(R.id.back_button);
         areaRecyclerView = (RecyclerView) view.findViewById(R.id.area_recycler_view);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         areaRecyclerView.setLayoutManager(layoutManager);
-        adapter = new AreaAdapter(getContext(),dataList);
+        adapter = new AreaAdapter(getContext(), dataList);
         areaRecyclerView.setAdapter(adapter);
         areaRecyclerView.addItemDecoration(new RecyclerViewItemDecoration(getContext()));
         return view;
@@ -109,7 +119,9 @@ public class ChooseAreaFragment extends Fragment {
         adapter.setOnItemClickListener(new AreaAdapter.OnItemClickListener() {
             @Override
             public void onClick(int position, View v) {
-                if (currentLevel == LEVEL_PROVINCE) {
+                if (currentLevel == LEVEL_MANAGEMENT && position == 0) {
+                    queryProvinces();
+                } else if (currentLevel == LEVEL_PROVINCE) {
                     selectedProvince = provinceList.get(position);
                     queryCities();
                 } else if (currentLevel == LEVEL_CITY) {
@@ -117,6 +129,7 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     String weatherId = countyList.get(position).getWeatherId();
+                    String selectedCountyName = countyList.get(position).getCountyName();
                     if (getActivity() instanceof MainActivity) {
                         Intent intent = new Intent(getActivity(), WeatherActivity.class);
                         intent.putExtra("weather_id", weatherId);
@@ -128,6 +141,14 @@ public class ChooseAreaFragment extends Fragment {
                         activity.swipeRefresh.setRefreshing(true);
                         activity.requestWeather(weatherId);
                     }
+                    addCounties = DataSupport.where("weatherId = ?", weatherId).find(AddCounty.class);
+                    if (addCounties.size() <= 0) {
+                        AddCounty addCounty = new AddCounty();
+                        addCounty.setWeatherId(weatherId);
+                        addCounty.setCountyName(selectedCountyName);
+                        addCounty.save();
+                    }
+                    queryAddCounty();
                 }
             }
         });
@@ -138,18 +159,45 @@ public class ChooseAreaFragment extends Fragment {
                     queryCities();
                 } else if (currentLevel == LEVEL_CITY) {
                     queryProvinces();
+                }else if (currentLevel == LEVEL_PROVINCE){
+                    queryAddCounty();
                 }
             }
         });
-        queryProvinces();
+        queryAddCounty();
+    }
+
+    /**
+     * 显示添加的城市
+     */
+    public void queryAddCounty() {
+        titleText.setText("城市管理");
+        backButton.setVisibility(View.GONE);
+        locationIvObj.setVisibility(View.VISIBLE);
+        addCounties = DataSupport.findAll(AddCounty.class);
+        dataList.clear();
+        dataList.add("添加城市");
+        if (null != addCounties && addCounties.size() > 0) {
+            for (AddCounty addCounty : addCounties) {
+                dataList.add(addCounty.getCountyName());
+            }
+            adapter.setIsvisiable(true);
+            adapter.notifyDataSetChanged();
+            areaRecyclerView.scrollToPosition(0);
+            currentLevel = LEVEL_MANAGEMENT;
+        } else {
+            Toast.makeText(getContext(), "请添加城市", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /**
      * 加载全国所有的省，优先才数据库查询，如果没有查询到再去服务器上获取
      */
-    private void queryProvinces() {
+    public void queryProvinces() {
         titleText.setText("中国");
-        backButton.setVisibility(View.GONE);
+        adapter.setIsvisiable(false);
+        backButton.setVisibility(View.VISIBLE);
+        locationIvObj.setVisibility(View.GONE);
         provinceList = DataSupport.findAll(Province.class);
 //        Log.i("test","queryProvinces1");
         if (null != provinceList && provinceList.size() > 0) {
@@ -174,6 +222,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCities() {
         titleText.setText(selectedProvince.getProvinceName());
         backButton.setVisibility(View.VISIBLE);
+        locationIvObj.setVisibility(View.GONE);
         cityList = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getProvinceCode())).find(City.class);
         if (null != cityList && cityList.size() > 0) {
             dataList.clear();
@@ -197,6 +246,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCounties() {
         titleText.setText(selecetedCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
+        locationIvObj.setVisibility(View.GONE);
         countyList = DataSupport.where("cityid = ?", String.valueOf(selecetedCity.getCityCode())).find(County.class);
         if (null != countyList && countyList.size() > 0) {
             dataList.clear();
